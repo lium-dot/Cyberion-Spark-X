@@ -1068024,8 +1068024,12 @@
 
 
 
+
+
 import pkg from '@whiskeysockets/baileys';
 import config from '../../config.cjs';
+import fs from 'fs';
+import path from 'path';
 const { generateWAMessageFromContent, proto } = pkg;
 
 const validCommands = ['alive', 'runtime', 'uptime'];
@@ -1068061,22 +1068065,44 @@ const alive = async (m, Matrix) => {
 ┇ 📴 *${seconds} Second${seconds !== 1 ? 's' : ''}*
 ╰─────┈━═──━┈⊷`;
 
-    // Prepare the message
-    const message = {
-      text: responseText,
-      mentions: [m.sender],
-      contextInfo: {
-        mentionedJid: [m.sender],
-        stanzaId: m.key.id,
-        participant: m.sender,
-        quotedMessage: {
-          conversation: text
-        }
+    // Try to send image with caption
+    try {
+      const imagePath = path.join('Buddy', 'porn.jpg');
+      if (fs.existsSync(imagePath)) {
+        const imageMessage = {
+          image: { url: imagePath },
+          caption: responseText,
+          mentions: [m.sender],
+          contextInfo: {
+            mentionedJid: [m.sender],
+            stanzaId: m.key.id,
+            participant: m.sender,
+            quotedMessage: {
+              conversation: text
+            }
+          }
+        };
+        await Matrix.sendMessage(m.from, imageMessage, { quoted: m });
+      } else {
+        throw new Error('Image not found');
       }
-    };
-
-    // Send the message
-    await Matrix.sendMessage(m.from, message, { quoted: m });
+    } catch (imageError) {
+      console.log('Image not found, sending text only');
+      // Fallback to text message if image fails
+      const message = {
+        text: `*[Image Not Found]*\n\n${responseText}\n\nCould not find the image at Buddy/porn.jpg`,
+        mentions: [m.sender],
+        contextInfo: {
+          mentionedJid: [m.sender],
+          stanzaId: m.key.id,
+          participant: m.sender,
+          quotedMessage: {
+            conversation: text
+          }
+        }
+      };
+      await Matrix.sendMessage(m.from, message, { quoted: m });
+    }
   } catch (error) {
     console.error('Error in alive command:', error);
   }
